@@ -14,7 +14,10 @@ namespace EventSync_API.Models
         public string? FcmToken { get; set; } 
         
         // Navigation properties
+        [System.Text.Json.Serialization.JsonIgnore]
         public ICollection<Booking> Bookings { get; set; } = new List<Booking>();
+        
+        [System.Text.Json.Serialization.JsonIgnore]
         public ICollection<Notification> Notifications { get; set; } = new List<Notification>();
     }
 }

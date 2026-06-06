@@ -16,16 +16,22 @@ namespace EventSync_API.Data
         {
             base.OnModelCreating(modelBuilder);
             
-            // Configuring many-to-one relationships
+            // Booking relationships
             modelBuilder.Entity<Booking>()
                 .HasOne(b => b.User)
                 .WithMany(u => u.Bookings)
                 .HasForeignKey(b => b.UserId);
-
+        
             modelBuilder.Entity<Booking>()
                 .HasOne(b => b.Event)
                 .WithMany(e => e.Bookings)
                 .HasForeignKey(b => b.EventId);
+        
+            // Notification relationship (Add this)
+            modelBuilder.Entity<Notification>()
+                .HasOne(n => n.User)
+                .WithMany(u => u.Notifications)
+                .HasForeignKey(n => n.UserId);
         }
     }
 }

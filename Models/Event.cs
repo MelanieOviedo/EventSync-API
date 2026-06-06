@@ -15,6 +15,7 @@ namespace EventSync_API.Models
         public string? ImagePath { get; set; } 
         
         // Navigation properties
+        [System.Text.Json.Serialization.JsonIgnore]
         public ICollection<Booking> Bookings { get; set; } = new List<Booking>();
     }
 }
