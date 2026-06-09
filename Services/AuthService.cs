@@ -2,16 +2,22 @@ using EventSync_API.DTOs;
 using EventSync_API.Repositories;
 using EventSync_API.Mappers;
 using EventSync_API.Models;
+using Microsoft.IdentityModel.Tokens;
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
+using System.Text;
 
 namespace EventSync_API.Services
 {
     public class AuthService : IAuthService
     {
         private readonly IUserRepository _userRepository;
+        private readonly IConfiguration _configuration;
 
-        public AuthService(IUserRepository userRepository)
+        public AuthService(IUserRepository userRepository, IConfiguration configuration)
         {
             _userRepository = userRepository;
+            _configuration = configuration;
         }
 
         public async Task<UserResponse?> LoginAsync(LoginRequest loginRequest)
@@ -23,7 +29,11 @@ namespace EventSync_API.Services
                 return null;
             }
 
-            return UserMapper.ToUserResponse(user);
+            var response = UserMapper.ToUserResponse(user);
+            response.Token = GenerateJwtToken(user);
+            response.Message = "Bienvenido de nuevo";
+            
+            return response;
         }
 
         public async Task<UserResponse?> RegisterAsync(RegisterRequest registerRequest)
@@ -37,14 +47,42 @@ namespace EventSync_API.Services
 
             var newUser = new User
             {
-                FullName = registerRequest.Name,
+                FullName = registerRequest.FullName,
                 Email = registerRequest.Email,
                 PasswordHash = registerRequest.Password, // Guardando temporalmente en texto plano
                 Role = "Customer"
             };
 
             var createdUser = await _userRepository.CreateUserAsync(newUser);
-            return UserMapper.ToUserResponse(createdUser);
+            var response = UserMapper.ToUserResponse(createdUser);
+            response.Token = GenerateJwtToken(createdUser);
+            response.Message = "Usuario creado exitosamente";
+
+            return response;
+        }
+
+        private string GenerateJwtToken(User user)
+        {
+            var jwtSettings = _configuration.GetSection("Jwt");
+            var key = Encoding.ASCII.GetBytes(jwtSettings["Key"]!);
+            var tokenHandler = new JwtSecurityTokenHandler();
+            
+            var tokenDescriptor = new SecurityTokenDescriptor
+            {
+                Subject = new ClaimsIdentity(new[]
+                {
+                    new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
+                    new Claim(ClaimTypes.Email, user.Email),
+                    new Claim(ClaimTypes.Role, user.Role)
+                }),
+                Expires = DateTime.UtcNow.AddDays(7),
+                Issuer = jwtSettings["Issuer"],
+                Audience = jwtSettings["Audience"],
+                SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature)
+            };
+
+            var token = tokenHandler.CreateToken(tokenDescriptor);
+            return tokenHandler.WriteToken(token);
         }
     }
 }

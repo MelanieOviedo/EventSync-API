@@ -22,7 +22,7 @@ namespace EventSync_API.Controllers
 
             if (response == null)
             {
-                return Unauthorized(new { message = "Credenciales incorrectas" });
+                return Unauthorized(new { message = "Correo o contraseña incorrectos" });
             }
 
             return Ok(response);
@@ -35,10 +35,10 @@ namespace EventSync_API.Controllers
 
             if (response == null)
             {
-                return BadRequest(new { message = "El usuario ya existe" });
+                return Conflict(new { message = "El correo electrónico ya está registrado" });
             }
 
-            return CreatedAtAction(nameof(Login), new { id = response.Id }, response);
+            return CreatedAtAction(nameof(Login), response);
         }
     }
 }

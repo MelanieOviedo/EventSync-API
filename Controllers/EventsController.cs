@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using EventSync_API.Data;
 using EventSync_API.Models;
 using EventSync_API.DTOs;
+using System.Globalization;
 
 namespace EventSync_API.Controllers
 {
@@ -11,16 +12,34 @@ namespace EventSync_API.Controllers
     public class EventsController : ControllerBase
     {
         private readonly AppDbContext _context;
+        private readonly IConfiguration _configuration;
 
-        public EventsController(AppDbContext context)
+        public EventsController(AppDbContext context, IConfiguration configuration)
         {
             _context = context;
+            _configuration = configuration;
         }
 
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<Event>>> GetEvents()
+        public async Task<ActionResult<IEnumerable<EventResponseDto>>> GetEvents()
         {
-            return await _context.Events.ToListAsync();
+            var events = await _context.Events.ToListAsync();
+            
+            var response = events.Select(e => new EventResponseDto
+            {
+                Id = e.Id,
+                Title = e.Title,
+                Description = e.Description,
+                Date = e.Date,
+                MaxCapacity = e.MaxCapacity,
+                AvailableSpots = e.AvailableSpots,
+                // Enviamos la ruta relativa limpia (sin wwwroot y con / en lugar de \)
+                ImagePath = string.IsNullOrEmpty(e.ImagePath) 
+                    ? null 
+                    : e.ImagePath.Replace("wwwroot/", "").Replace("wwwroot\\", "").Replace("\\", "/")
+            }).ToList();
+
+            return Ok(response);
         }
 
         [HttpPost]
@@ -32,7 +51,7 @@ namespace EventSync_API.Controllers
                 Description = eventDto.Description,
                 Date = eventDto.Date,
                 MaxCapacity = eventDto.MaxCapacity,
-                AvailableSpots = eventDto.MaxCapacity, // Initialize available spots
+                AvailableSpots = eventDto.MaxCapacity,
                 ImagePath = eventDto.ImagePath
             };
 
