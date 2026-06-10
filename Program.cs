@@ -53,6 +53,10 @@ builder.Services.AddCors(options =>
 // Registro de Repositorios y Servicios
 builder.Services.AddScoped<EventSync_API.Repositories.IUserRepository, EventSync_API.Repositories.UserRepository>();
 builder.Services.AddScoped<EventSync_API.Services.IAuthService, EventSync_API.Services.AuthService>();
+builder.Services.AddScoped<EventSync_API.Repositories.IEventRepository, EventSync_API.Repositories.EventRepository>();
+builder.Services.AddScoped<EventSync_API.Services.IEventService, EventSync_API.Services.EventService>();
+builder.Services.AddScoped<EventSync_API.Repositories.IBookingRepository, EventSync_API.Repositories.BookingRepository>();
+builder.Services.AddScoped<EventSync_API.Services.IBookingService, EventSync_API.Services.BookingService>();
 
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();

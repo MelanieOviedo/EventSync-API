@@ -1,8 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using EventSync_API.Data;
-using EventSync_API.Models;
 using EventSync_API.DTOs;
+using EventSync_API.Services;
 
 namespace EventSync_API.Controllers
 {
@@ -10,45 +8,28 @@ namespace EventSync_API.Controllers
     [ApiController]
     public class BookingsController : ControllerBase
     {
-        private readonly AppDbContext _context;
+        private readonly IBookingService _bookingService;
 
-        public BookingsController(AppDbContext context)
+        public BookingsController(IBookingService bookingService)
         {
-            _context = context;
-        }
-
-        [HttpGet]
-        public async Task<ActionResult<IEnumerable<Booking>>> GetBookings()
-        {
-            return await _context.Bookings
-                .Include(b => b.User)
-                .Include(b => b.Event)
-                .ToListAsync();
+            _bookingService = bookingService;
         }
 
         [HttpPost]
-        public async Task<ActionResult<Booking>> PostBooking(BookingCreateDto bookingDto)
+        public async Task<ActionResult<BookingResponseDto>> CreateBooking([FromBody] BookingRequestDto request)
         {
-            // Basic validation for Module 3
-            var targetEvent = await _context.Events.FindAsync(bookingDto.EventId);
-            if (targetEvent == null || targetEvent.AvailableSpots <= 0)
+            // Nota: Por ahora usamos un UserId fijo (1) hasta que implementemos JWT completo
+            // para obtener el ID del usuario autenticado.
+            int userId = 1; 
+
+            var response = await _bookingService.CreateBookingAsync(request.EventId, userId);
+
+            if (response == null)
             {
-                return BadRequest("No spots available or event not found.");
+                return BadRequest(new { message = "No se pudo realizar la reserva. Verifique si hay cupos disponibles o si el evento existe." });
             }
 
-            var booking = new Booking
-            {
-                UserId = bookingDto.UserId,
-                EventId = bookingDto.EventId,
-                BookingDate = DateTime.UtcNow,
-                Status = "Active"
-            };
-
-            targetEvent.AvailableSpots--; // Decrease spots
-            _context.Bookings.Add(booking);
-            await _context.SaveChangesAsync();
-
-            return CreatedAtAction(nameof(GetBookings), new { id = booking.Id }, booking);
+            return Ok(response);
         }
     }
 }

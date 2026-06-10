@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using EventSync_API.Data;
 using EventSync_API.Models;
 using EventSync_API.DTOs;
+using EventSync_API.Services;
 using System.Globalization;
 
 namespace EventSync_API.Controllers
@@ -11,54 +12,38 @@ namespace EventSync_API.Controllers
     [ApiController]
     public class EventsController : ControllerBase
     {
-        private readonly AppDbContext _context;
-        private readonly IConfiguration _configuration;
+        private readonly IEventService _eventService;
 
-        public EventsController(AppDbContext context, IConfiguration configuration)
+        public EventsController(IEventService eventService)
         {
-            _context = context;
-            _configuration = configuration;
+            _eventService = eventService;
         }
 
         [HttpGet]
         public async Task<ActionResult<IEnumerable<EventResponseDto>>> GetEvents()
         {
-            var events = await _context.Events.ToListAsync();
-            
-            var response = events.Select(e => new EventResponseDto
-            {
-                Id = e.Id,
-                Title = e.Title,
-                Description = e.Description,
-                Date = e.Date,
-                MaxCapacity = e.MaxCapacity,
-                AvailableSpots = e.AvailableSpots,
-                // Enviamos la ruta relativa limpia (sin wwwroot y con / en lugar de \)
-                ImagePath = string.IsNullOrEmpty(e.ImagePath) 
-                    ? null 
-                    : e.ImagePath.Replace("wwwroot/", "").Replace("wwwroot\\", "").Replace("\\", "/")
-            }).ToList();
+            var events = await _eventService.GetAllEventsAsync();
+            return Ok(events);
+        }
 
-            return Ok(response);
+        [HttpGet("{id}")]
+        public async Task<ActionResult<EventResponseDto>> GetEvent(int id)
+        {
+            var @event = await _eventService.GetEventByIdAsync(id);
+
+            if (@event == null)
+            {
+                return NotFound(new { message = "Evento no encontrado" });
+            }
+
+            return Ok(@event);
         }
 
         [HttpPost]
-        public async Task<ActionResult<Event>> PostEvent(EventCreateDto eventDto)
+        public async Task<ActionResult<EventResponseDto>> PostEvent(EventCreateDto eventDto)
         {
-            var @event = new Event
-            {
-                Title = eventDto.Title,
-                Description = eventDto.Description,
-                Date = eventDto.Date,
-                MaxCapacity = eventDto.MaxCapacity,
-                AvailableSpots = eventDto.MaxCapacity,
-                ImagePath = eventDto.ImagePath
-            };
-
-            _context.Events.Add(@event);
-            await _context.SaveChangesAsync();
-
-            return CreatedAtAction(nameof(GetEvents), new { id = @event.Id }, @event);
+            var createdEvent = await _eventService.CreateEventAsync(eventDto);
+            return CreatedAtAction(nameof(GetEvent), new { id = createdEvent.Id }, createdEvent);
         }
     }
 }
