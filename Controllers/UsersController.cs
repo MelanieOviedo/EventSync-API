@@ -1,8 +1,10 @@
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using EventSync_API.Data;
+using Microsoft.AspNetCore.Authorization;
+using System.Security.Claims;
+using EventSync_API.Repositories;
 using EventSync_API.Models;
 using EventSync_API.DTOs;
+using EventSync_API.Mappers;
 
 namespace EventSync_API.Controllers
 {
@@ -10,17 +12,55 @@ namespace EventSync_API.Controllers
     [ApiController]
     public class UsersController : ControllerBase
     {
-        private readonly AppDbContext _context;
+        private readonly IUserRepository _userRepository;
 
-        public UsersController(AppDbContext context)
+        public UsersController(IUserRepository userRepository)
         {
-            _context = context;
+            _userRepository = userRepository;
         }
 
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<User>>> GetUsers() // Changed Usuario to User
+        public async Task<ActionResult<IEnumerable<User>>> GetUsers()
         {
-            return await _context.Users.ToListAsync(); // Changed Usuarios to Users
+            var users = await _userRepository.GetUsersAsync();
+            return Ok(users);
+        }
+
+        [Authorize]
+        [HttpGet("profile")]
+        public async Task<ActionResult<UserResponse>> GetProfile()
+        {
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+            if (userIdClaim == null) return Unauthorized();
+
+            int userId = int.Parse(userIdClaim.Value);
+            var user = await _userRepository.GetUserByIdAsync(userId);
+
+            if (user == null) return NotFound(new { message = "Usuario no encontrado" });
+
+            return Ok(UserMapper.ToUserResponse(user));
+        }
+
+        [Authorize]
+        [HttpPost("change-password")]
+        public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordRequest request)
+        {
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+            if (userIdClaim == null) return Unauthorized();
+
+            int userId = int.Parse(userIdClaim.Value);
+            var user = await _userRepository.GetUserByIdAsync(userId);
+
+            if (user == null) return NotFound(new { message = "Usuario no encontrado" });
+
+            // Nota: Al igual que en el login, comparamos texto plano por ahora
+            if (user.PasswordHash != request.CurrentPassword)
+                return BadRequest(new { message = "La contraseña actual es incorrecta" });
+
+            user.PasswordHash = request.NewPassword;
+            await _userRepository.UpdateUserAsync(user);
+
+            return Ok(new { message = "Contraseña actualizada exitosamente" });
         }
 
         [HttpPost]
@@ -34,8 +74,7 @@ namespace EventSync_API.Controllers
                 Role = userDto.Role
             };
 
-            _context.Users.Add(user);
-            await _context.SaveChangesAsync();
+            await _userRepository.CreateUserAsync(user);
 
             return CreatedAtAction(nameof(GetUsers), new { id = user.Id }, user);
         }

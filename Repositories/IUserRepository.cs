@@ -6,6 +6,9 @@ namespace EventSync_API.Repositories
     {
         Task<User?> GetUserByEmailAndPasswordAsync(string email, string password);
         Task<User?> GetUserByEmailAsync(string email);
+        Task<User?> GetUserByIdAsync(int id);
+        Task<IEnumerable<User>> GetUsersAsync();
         Task<User> CreateUserAsync(User user);
+        Task UpdateUserAsync(User user);
     }
 }
