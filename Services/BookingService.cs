@@ -2,6 +2,7 @@ using EventSync_API.DTOs;
 using EventSync_API.Models;
 using EventSync_API.Repositories;
 using EventSync_API.Data;
+using Microsoft.EntityFrameworkCore;
 
 namespace EventSync_API.Services
 {
@@ -16,6 +17,14 @@ namespace EventSync_API.Services
             _bookingRepository = bookingRepository;
             _eventRepository = eventRepository;
             _context = context;
+        }
+
+        public async Task<IEnumerable<Booking>> GetUserBookingsAsync(int userId)
+        {
+            return await _context.Bookings
+                .Include(b => b.Event) // Incluimos los detalles del evento
+                .Where(b => b.UserId == userId)
+                .ToListAsync();
         }
 
         public async Task<BookingResponseDto?> CreateBookingAsync(int eventId, int userId)
