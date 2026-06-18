@@ -3,7 +3,6 @@ using Microsoft.AspNetCore.Authorization;
 using System.Security.Claims;
 using EventSync_API.DTOs;
 using EventSync_API.Services;
-using EventSync_API.Models;
 
 namespace EventSync_API.Controllers
 {
@@ -20,15 +19,25 @@ namespace EventSync_API.Controllers
         }
 
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<Booking>>> GetMyBookings()
+        public async Task<ActionResult<IEnumerable<BookingHistoryResponseDto>>> GetMyBookings()
         {
             var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
             if (userIdClaim == null) return Unauthorized();
 
             int userId = int.Parse(userIdClaim.Value);
             var bookings = await _bookingService.GetUserBookingsAsync(userId);
-            
-            return Ok(bookings);
+
+            var response = bookings.Select(b => new BookingHistoryResponseDto
+            {
+                Id = b.Id,
+                EventId = b.EventId,
+                EventTitle = b.Event?.Title ?? "Evento no encontrado",
+                EventDate = b.Event?.Date.ToString("yyyy-MM-ddTHH:mm:ss") ?? string.Empty,
+                BookingDate = b.BookingDate.ToString("yyyy-MM-ddTHH:mm:ss"),
+                Status = b.Status
+            });
+
+            return Ok(response);
         }
 
         [HttpPost]

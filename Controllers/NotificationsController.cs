@@ -1,5 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Authorization;
+using System.Security.Claims;
 using EventSync_API.Data;
 using EventSync_API.Models;
 
@@ -16,9 +18,15 @@ namespace EventSync_API.Controllers
             _context = context;
         }
 
-        [HttpGet("user/{userId}")]
-        public async Task<ActionResult<IEnumerable<Notification>>> GetUserNotifications(int userId)
+        [Authorize]
+        [HttpGet]
+        public async Task<ActionResult<IEnumerable<Notification>>> GetUserNotifications()
         {
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+            if (userIdClaim == null) return Unauthorized();
+
+            int userId = int.Parse(userIdClaim.Value);
+
             return await _context.Notifications
                 .Where(n => n.UserId == userId)
                 .OrderByDescending(n => n.SentDate)
