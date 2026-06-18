@@ -64,23 +64,42 @@ builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
+using (var scope = app.Services.CreateScope())
+{
+    var services = scope.ServiceProvider;
+    try
+    {
+        // Obtenemos la instancia de DbContext
+        var context = services.GetRequiredService<AppDbContext>();
+
+        // Ejecutamos el seeder
+        await DatabaseSeeder.SeedAsync(context);
+    }
+    catch (Exception ex)
+    {
+        var logger = services.GetRequiredService<ILogger<Program>>();
+        logger.LogError(ex, "Ocurrió un error al ejecutar el seeder de la base de datos.");
+    }
+}
+
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
 }
 
-app.UseCors(); // Habilitar CORS
-
-app.UseDefaultFiles(); // Permite buscar index.html por defecto
-app.UseStaticFiles(); // Habilitar archivos estáticos para las imágenes
-
-app.UseAuthentication(); // Habilitar Autenticación
-app.UseAuthorization(); // Habilitar Autorización
-
 app.UseHttpsRedirection();
+app.UseCors();
 
+// Archivos Estáticos (Esto expone la carpeta wwwroot)
+app.UseDefaultFiles();
+app.UseStaticFiles();
+
+// Autenticación y Autorización
+app.UseAuthentication();
+app.UseAuthorization();
+
+// Mapeo de Controladores
 app.MapControllers();
 
 app.Run();

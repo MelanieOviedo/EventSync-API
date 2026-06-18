@@ -31,6 +31,11 @@ namespace EventSync_API.Services
             return EventMapper.ToEventResponse(@event);
         }
 
+        public async Task<IEnumerable<EventAttendeeDto>> GetEventAttendeesAsync(int eventId)
+        {
+            return await _eventRepository.GetEventAttendeesAsync(eventId);
+        }
+
         public async Task<EventResponseDto> CreateEventAsync(EventCreateDto eventDto)
         {
             var @event = new Event
@@ -45,6 +50,38 @@ namespace EventSync_API.Services
 
             var createdEvent = await _eventRepository.CreateEventAsync(@event);
             return EventMapper.ToEventResponse(createdEvent);
+        }
+
+        public async Task<bool> UpdateEventAsync(int id, EventUpdateDto eventDto)
+        {
+            var @event = await _eventRepository.GetEventByIdAsync(id);
+            if (@event == null) return false;
+
+            @event.Title = eventDto.Title;
+            @event.Description = eventDto.Description;
+            @event.Date = eventDto.Date;
+            
+            // Ajustar cupos disponibles si cambia la capacidad máxima
+            int capacityDiff = eventDto.MaxCapacity - @event.MaxCapacity;
+            @event.MaxCapacity = eventDto.MaxCapacity;
+            @event.AvailableSpots += capacityDiff;
+
+            if (eventDto.ImagePath != null)
+            {
+                @event.ImagePath = eventDto.ImagePath;
+            }
+
+            await _eventRepository.UpdateEventAsync(@event);
+            return true;
+        }
+
+        public async Task<bool> DeleteEventAsync(int id)
+        {
+            var @event = await _eventRepository.GetEventByIdAsync(id);
+            if (@event == null) return false;
+
+            await _eventRepository.DeleteEventAsync(id);
+            return true;
         }
     }
 }
