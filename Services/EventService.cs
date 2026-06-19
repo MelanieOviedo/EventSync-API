@@ -59,7 +59,6 @@ namespace EventSync_API.Services
             var @event = await _eventRepository.GetEventByIdAsync(id);
             if (@event == null) return false;
 
-            // Determinar si hay cambios importantes
             bool isDateChanged = @event.Date != eventDto.Date;
             bool isDescriptionChanged = @event.Description != eventDto.Description;
             bool isTitleChanged = @event.Title != eventDto.Title;
@@ -71,8 +70,7 @@ namespace EventSync_API.Services
             @event.Title = eventDto.Title;
             @event.Description = eventDto.Description;
             @event.Date = eventDto.Date;
-            
-            // Ajustar cupos disponibles si cambia la capacidad máxima
+
             int capacityDiff = eventDto.MaxCapacity - @event.MaxCapacity;
             @event.MaxCapacity = eventDto.MaxCapacity;
             @event.AvailableSpots += capacityDiff;
@@ -84,7 +82,6 @@ namespace EventSync_API.Services
 
             await _eventRepository.UpdateEventAsync(@event);
 
-            // Si hay cambios importantes y hay usuarios inscritos, notificarles
             if (hasImportantChanges)
             {
                 var attendees = await _eventRepository.GetEventAttendeesAsync(id);
@@ -98,9 +95,16 @@ namespace EventSync_API.Services
                     if (isDescriptionChanged) changeDetails.Add("descripción");
 
                     string title = $"Actualización de evento: {eventDto.Title}";
-                    string message = $"El evento '{oldTitle}' (programado originalmente para el {oldDate:dd/MM/yyyy HH:mm}) ha sido modificado. Cambios importantes en: {string.Join(", ", changeDetails)}.";
+                    string message = $"El evento '{oldTitle}' (programado originalmente para el {oldDate:dd/MM/yyyy HH:mm}) ha sido modificado. Cambios en: {string.Join(", ", changeDetails)}.";
 
-                    await _notificationService.SendNotificationToUsersAsync(userIds, title, message);
+                    try
+                    {
+                        await _notificationService.SendNotificationToUsersAsync(userIds, title, message);
+                    }
+                    catch (Exception ex)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"Error al notificar actualización del evento: {ex.Message}");
+                    }
                 }
             }
 
@@ -115,14 +119,23 @@ namespace EventSync_API.Services
             var attendees = await _eventRepository.GetEventAttendeesAsync(id);
             var userIds = attendees.Select(a => a.UserId).ToList();
 
+            await _eventRepository.DeleteEventAsync(id);
+
             if (userIds.Any())
             {
                 string title = $"Evento Cancelado: {@event.Title}";
                 string message = $"El evento '{@event.Title}' programado para el {@event.Date:dd/MM/yyyy HH:mm} ha sido cancelado.";
-                await _notificationService.SendNotificationToUsersAsync(userIds, title, message);
+
+                try
+                {
+                    await _notificationService.SendNotificationToUsersAsync(userIds, title, message);
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"Error al notificar cancelación del evento: {ex.Message}");
+                }
             }
 
-            await _eventRepository.DeleteEventAsync(id);
             return true;
         }
     }

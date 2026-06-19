@@ -63,6 +63,20 @@ builder.Services.AddScoped<EventSync_API.Services.INotificationService, EventSyn
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
+// Configuración de Firebase Admin
+var serviceAccountPath = Path.Combine(builder.Environment.ContentRootPath, "service-account.json");
+if (File.Exists(serviceAccountPath))
+{
+    // 1. Establecemos la variable de entorno con la ruta del archivo
+    Environment.SetEnvironmentVariable("GOOGLE_APPLICATION_CREDENTIALS", serviceAccountPath);
+
+    // 2. Inicializamos Firebase diciéndole explícitamente que use esa variable de entorno
+    FirebaseAdmin.FirebaseApp.Create(new FirebaseAdmin.AppOptions()
+    {
+        Credential = Google.Apis.Auth.OAuth2.GoogleCredential.GetApplicationDefault()
+    });
+}
+
 var app = builder.Build();
 
 using (var scope = app.Services.CreateScope())

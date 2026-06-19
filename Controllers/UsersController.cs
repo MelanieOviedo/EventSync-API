@@ -78,5 +78,35 @@ namespace EventSync_API.Controllers
 
             return CreatedAtAction(nameof(GetUsers), new { id = user.Id }, user);
         }
+
+        [HttpPut("fcm-token")]
+        public async Task<IActionResult> UpdateFcmToken([FromBody] FcmTokenRequest request)
+        {
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+            if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out int userId))
+            {
+                return Unauthorized(new { message = "Usuario no válido o sesión expirada." });
+            }
+
+            if (string.IsNullOrEmpty(request.FcmToken))
+            {
+                return BadRequest(new { message = "El token FCM es requerido." });
+            }
+
+            var user = await _userRepository.GetUserByIdAsync(userId);
+            if (user == null)
+            {
+                return NotFound(new { message = "Usuario no encontrado." });
+            }
+
+            if (user.FcmToken != request.FcmToken)
+            {
+                user.FcmToken = request.FcmToken;
+                await _userRepository.UpdateUserAsync(user);
+            }
+
+            return Ok(new { message = "Token FCM actualizado con éxito en el servidor." });
+        }
     }
 }

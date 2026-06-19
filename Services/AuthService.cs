@@ -29,6 +29,12 @@ namespace EventSync_API.Services
                 return null;
             }
 
+            if (!string.IsNullOrEmpty(loginRequest.FcmToken) && user.FcmToken != loginRequest.FcmToken)
+            {
+                user.FcmToken = loginRequest.FcmToken;
+                await _userRepository.UpdateUserAsync(user);
+            }
+
             var response = UserMapper.ToUserResponse(user);
             response.Token = GenerateJwtToken(user);
             response.Message = "Bienvenido de nuevo";
@@ -42,15 +48,16 @@ namespace EventSync_API.Services
             var existingUser = await _userRepository.GetUserByEmailAsync(registerRequest.Email);
             if (existingUser != null)
             {
-                return null; // O podrías lanzar una excepción personalizada
+                return null;
             }
 
             var newUser = new User
             {
                 FullName = registerRequest.FullName,
                 Email = registerRequest.Email,
-                PasswordHash = registerRequest.Password, // Guardando temporalmente en texto plano
-                Role = "Customer"
+                PasswordHash = registerRequest.Password,
+                Role = "Customer",
+                FcmToken = registerRequest.FcmToken
             };
 
             var createdUser = await _userRepository.CreateUserAsync(newUser);
