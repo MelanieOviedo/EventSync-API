@@ -427,3 +427,9 @@ FodyWeavers.xsd
 *.msix
 *.msm
 *.msp
+
+# Images path
+wwwroot/images/*
+
+# Google Service Account JSON (if used for FCM)
+service-account.json
